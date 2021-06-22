@@ -1,8 +1,6 @@
 # Make Predictions with k-nearest neighbors on the Iris Flowers Dataset
 import pandas as pd
 from math import sqrt
-import random
-from decimal import Decimal
 
 
 def getdata(filename, sheet):
@@ -156,13 +154,11 @@ def classification_output_latih(train, data, num_neighbors, algorithm):
 
 def classification_output_submit(train, data, num_neighbors, algorithm):
     result = []
-    accuracy = 1
     for i in range(1, len(data)):
         label = predict_classification(train, data[i], num_neighbors,
                                        algorithm)
         result.append([i, label])
 
-    result[0].append(accuracy / (len(data) - 1))
     result = pd.DataFrame(result)
     result.columns = ['idData', 'Klasifikasi']
     result.to_excel('./OutputSubmit.xlsx', index=False)
@@ -172,7 +168,7 @@ def classification_output_submit(train, data, num_neighbors, algorithm):
 
 k_start = 1
 k_interval = 1
-k_max = 6
+k_max = 20
 accuracy = 0
 k_value = 0
 algorithm = ''
