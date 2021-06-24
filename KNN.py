@@ -8,24 +8,19 @@ def getdata(filename, sheet):
     return xlsx
 
 
-filename = 'DataSetTB3_SHARE.xlsx'
-data = getdata(filename, 0)  #data uji dan data latih
-submit = getdata(filename, 1)  #data yang dicari
-data = data.values.tolist()  #data dirubah dari bentuk dataframe menjadi list
-submit = submit.values.tolist()
-
-
 # Find the min and max values for each column
-def dataset_minmax(dataset):
-    minmax = list()
+def find_minmax(dataset):
+    data_minmax = []
     for i in range(
             2, len(dataset[0])
     ):  #rangenya dari 2 sampai length karena 2 kolom pertama tidak digunakan (id dan klasifikasi)
-        col_values = [row[i] for row in dataset]
-        value_min = min(col_values)
-        value_max = max(col_values)
-        minmax.append([value_min, value_max])
-    return minmax
+        row_minmax = []
+        for row in dataset:
+            row_minmax.append(row[i])
+        value_min = min(row_minmax)
+        value_max = max(row_minmax)
+        data_minmax.append([value_min, value_max])
+    return data_minmax
 
 
 # Rescale dataset columns to the range 0-1
@@ -43,7 +38,7 @@ def normalize_dataset(dataset, minmax):
 
 # Calculate the Euclidean distance between two vectors
 def euclidean_distance(row1, row2):
-    distance = 0.0
+    distance = 0
     for i in range(2, len(row1)):
         distance += (row1[i] - row2[i])**2
     return sqrt(distance)
@@ -51,18 +46,115 @@ def euclidean_distance(row1, row2):
 
 # Calculate the Minkowski distance between two vectors
 def minkowski_distance(row1, row2):
-    distance = 0.0
+    distance = 0
     for i in range(2, len(row1)):
         distance += abs(row1[i] - row2[i])
     return distance
 
 
+# Locate the most similar neighbors
+def find_neighbour(train_set, test_row, n_neighbour, algorithm):
+    distances = []
+    if algorithm == 'e':
+        for train_row in train_set:
+            dist = euclidean_distance(test_row, train_row)
+            distances.append((dist, train_row))
+    elif algorithm == 'm':
+        for train_row in train_set:
+            dist = minkowski_distance(test_row, train_row)
+            distances.append((dist, train_row))
+
+    distances.sort(key=lambda sort_index: sort_index[0])
+    neighbour = []
+    for i in range(n_neighbour):
+        neighbour.append(distances[i][1])
+    return neighbour
+
+
+# Make a prediction with neighbors
+def predict_classification(train_set, test_row, n_neighbour, algorithm):
+    neighbour = find_neighbour(train_set, test_row, n_neighbour, algorithm)
+    classification_value = []
+    for row in neighbour:
+        classification_value.append(row[1])
+    prediction = max(classification_value, key=classification_value.count)
+    return prediction
+
+
+def classification_testing(train_set, test_set, n_neighbour, algorithm):
+    result = []
+    accuracy = 1
+    for i in range(1, len(test_set)):
+        label = predict_classification(train_set, test_set[i], n_neighbour,
+                                       algorithm)
+        label_actual = test_set[i][1]
+        result.append([label, label_actual])
+        if label == label_actual:
+            accuracy += 1
+    return accuracy / (len(test_set) - 1)
+
+
+def optimal_k_value(train_set, test_set, k_start, k_step, k_max, algorithm):
+    max_acc = 0
+    optimal_k = 1
+    for i in range(k_start, k_max + 1, k_step):
+        accuracy = classification_testing(train_set, test_set, i, algorithm)
+        print(f"Accuracy result : {accuracy} , for K = {i}")
+        if accuracy > max_acc:
+            max_acc = accuracy
+            optimal_k = i
+    return optimal_k, max_acc
+
+
+def classification_output_test(train_set, data_set, n_neighbour, algorithm):
+    result = []
+    accuracy = 1
+    for i in range(1, len(data_set)):
+        label = predict_classification(train_set, data_set[i], n_neighbour,
+                                       algorithm)
+        label_actual = data_set[i][1]
+        result.append([i, label, label_actual])
+        if label == label_actual:
+            accuracy += 1
+    result[0].append(accuracy / (len(data_set) - 1))
+    result = pd.DataFrame(result)
+    result.columns = [
+        'idData', 'Klasifikasi', 'Klasifikasi Sebenarnya', 'Akurasi'
+    ]
+    result.to_excel('./OutputLatih.xlsx', index=False)
+
+
+def classification_output_submit(train_set, data_set, n_neighbour, algorithm):
+    result = []
+    for i in range(1, len(data_set)):
+        label = predict_classification(train_set, data_set[i], n_neighbour,
+                                       algorithm)
+        result.append([i, label])
+
+    result = pd.DataFrame(result)
+    result.columns = ['idData', 'Klasifikasi']
+    result.to_excel('./OutputSubmit.xlsx', index=False)
+
+
+#main program
+
+#Variabel
+k_start = 1
+k_interval = 2
+k_max = 10
+
+filename = 'DataSetTB3_SHARE.xlsx'
+data = getdata(filename, 0)  #data uji dan data latih
+submit = getdata(filename, 1)  #data yang dicari
+data = data.values.tolist()  #data dirubah dari bentuk dataframe menjadi list
+submit = submit.values.tolist()
+
 #proses normalisasi data
-data_minmax = dataset_minmax(data)
+data_minmax = find_minmax(data)
 normalize_dataset(data, data_minmax)
 
 #proses normalisasi submit
-data_minmax = dataset_minmax(submit)
+data_minmax = find_minmax(submit)
 normalize_dataset(submit, data_minmax)
 
 #membagi data menjadi data latih (70%) dan data uji (30%)
@@ -81,99 +173,12 @@ for i in range(len(data)):
     else:
         data_latih.append(data[i])
 
+print("-------------------------------------------------")
 
-# Locate the most similar neighbors
-def get_neighbors(train, test_row, num_neighbors, algorithm):
-    distances = list()
-    if algorithm == 'e':
-        for train_row in train:
-            dist = euclidean_distance(test_row, train_row)
-            distances.append((train_row, dist))
-    elif algorithm == 'm':
-        for train_row in train:
-            dist = minkowski_distance(test_row, train_row)
-            distances.append((train_row, dist))
-
-    distances.sort(key=lambda tup: tup[1])
-    neighbors = list()
-    for i in range(num_neighbors):
-        neighbors.append(distances[i][0])
-    return neighbors
-
-
-# Make a prediction with neighbors
-def predict_classification(train, test_row, num_neighbors, algorithm):
-    neighbors = get_neighbors(train, test_row, num_neighbors, algorithm)
-    output_values = [row[1] for row in neighbors]
-    prediction = max(set(output_values), key=output_values.count)
-    return prediction
-
-
-def classification_testing(train, test, num_neighbors, algorithm):
-    result = []
-    accuracy = 1
-    for i in range(1, len(test)):
-        label = predict_classification(train, test[i], num_neighbors,
-                                       algorithm)
-        label_actual = test[i][1]
-        result.append([label, label_actual])
-        if label == label_actual:
-            accuracy += 1
-    return accuracy / (len(test) - 1)
-
-
-def optimal_k_value(train, test, k_start, k_step, k_max, algorithm):
-    max_acc = 0
-    optimal_k = 1
-    for i in range(k_start, k_max + 1, k_step):
-        accuracy = classification_testing(train, test, i, algorithm)
-        print(f"Test-{i} result : {accuracy} , for K = {i}")
-        if accuracy > max_acc:
-            max_acc = accuracy
-            optimal_k = i
-    return optimal_k, max_acc
-
-
-def classification_output_latih(train, data, num_neighbors, algorithm):
-    result = []
-    accuracy = 1
-    for i in range(1, len(data)):
-        label = predict_classification(train, data[i], num_neighbors,
-                                       algorithm)
-        label_actual = data[i][1]
-        result.append([i, label, label_actual])
-        if label == label_actual:
-            accuracy += 1
-    result[0].append(accuracy / (len(data) - 1))
-    result = pd.DataFrame(result)
-    result.columns = [
-        'idData', 'Klasifikasi', 'Klasifikasi Sebenarnya', 'Akurasi'
-    ]
-    result.to_excel('./OutputLatih.xlsx', index=False)
-
-
-def classification_output_submit(train, data, num_neighbors, algorithm):
-    result = []
-    for i in range(1, len(data)):
-        label = predict_classification(train, data[i], num_neighbors,
-                                       algorithm)
-        result.append([i, label])
-
-    result = pd.DataFrame(result)
-    result.columns = ['idData', 'Klasifikasi']
-    result.to_excel('./OutputSubmit.xlsx', index=False)
-
-
-#main program
-
-k_start = 1
-k_interval = 1
-k_max = 20
 accuracy = 0
 k_value = 0
 algorithm = ''
 
-print("-------------------------------------------------")
 k_value_e, accuracy_e = optimal_k_value(data_latih, data_uji, k_start,
                                         k_interval, k_max, 'e')
 
@@ -206,5 +211,5 @@ else:
     algorithm = 'm'
 print("-------------------------------------------------")
 
-classification_output_latih(data_latih, data_uji, k_value, algorithm)
+classification_output_test(data_latih, data_uji, k_value, algorithm)
 classification_output_submit(data_latih, submit, k_value, algorithm)
