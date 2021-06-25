@@ -72,7 +72,7 @@ def find_neighbour(train_set, test_row, n_neighbour, algorithm):
 
 
 # Make a prediction with neighbors
-def predict_classification(train_set, test_row, n_neighbour, algorithm):
+def get_classification(train_set, test_row, n_neighbour, algorithm):
     neighbour = find_neighbour(train_set, test_row, n_neighbour, algorithm)
     classification_value = []
     for row in neighbour:
@@ -85,8 +85,8 @@ def classification_testing(train_set, test_set, n_neighbour, algorithm):
     result = []
     accuracy = 1
     for i in range(1, len(test_set)):
-        label = predict_classification(train_set, test_set[i], n_neighbour,
-                                       algorithm)
+        label = get_classification(train_set, test_set[i], n_neighbour,
+                                   algorithm)
         label_actual = test_set[i][1]
         result.append([label, label_actual])
         if label == label_actual:
@@ -110,8 +110,8 @@ def classification_output_test(train_set, data_set, n_neighbour, algorithm):
     result = []
     accuracy = 1
     for i in range(1, len(data_set)):
-        label = predict_classification(train_set, data_set[i], n_neighbour,
-                                       algorithm)
+        label = get_classification(train_set, data_set[i], n_neighbour,
+                                   algorithm)
         label_actual = data_set[i][1]
         result.append([i, label, label_actual])
         if label == label_actual:
@@ -127,8 +127,8 @@ def classification_output_test(train_set, data_set, n_neighbour, algorithm):
 def classification_output_submit(train_set, data_set, n_neighbour, algorithm):
     result = []
     for i in range(1, len(data_set)):
-        label = predict_classification(train_set, data_set[i], n_neighbour,
-                                       algorithm)
+        label = get_classification(train_set, data_set[i], n_neighbour,
+                                   algorithm)
         result.append([i, label])
 
     result = pd.DataFrame(result)
@@ -141,7 +141,7 @@ def classification_output_submit(train_set, data_set, n_neighbour, algorithm):
 #Variabel
 k_start = 1
 k_interval = 2
-k_max = 10
+k_max = 20
 
 filename = 'DataSetTB3_SHARE.xlsx'
 data = getdata(filename, 0)  #data uji dan data latih
