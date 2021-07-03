@@ -1,4 +1,3 @@
-# Make Predictions with k-nearest neighbors on the Iris Flowers Dataset
 import pandas as pd
 from math import sqrt
 
@@ -8,7 +7,7 @@ def getdata(filename, sheet):
     return xlsx
 
 
-# Find the min and max values for each column
+# Mencari nilai maks dan min tiap kolom
 def find_minmax(dataset):
     data_minmax = []
     for i in range(
@@ -23,7 +22,7 @@ def find_minmax(dataset):
     return data_minmax
 
 
-# Rescale dataset columns to the range 0-1
+# mengubah nilai masing-masing baris menjadi skala rentangan 0-1
 def normalize_dataset(dataset, minmax):
     for row in dataset:
         for i in range(2, len(row)):
@@ -36,7 +35,7 @@ def normalize_dataset(dataset, minmax):
                 #dataset[2], dst.
 
 
-# Calculate the Euclidean distance between two vectors
+# mencari jarak menggunakan euclidean
 def euclidean_distance(row1, row2):
     distance = 0
     for i in range(2, len(row1)):
@@ -44,15 +43,15 @@ def euclidean_distance(row1, row2):
     return sqrt(distance)
 
 
-# Calculate the Minkowski distance between two vectors
-def minkowski_distance(row1, row2):
+# mencari jarak menggunakan manhattan
+def manhattan_distance(row1, row2):
     distance = 0
     for i in range(2, len(row1)):
         distance += abs(row1[i] - row2[i])
     return distance
 
 
-# Locate the most similar neighbors
+# mencari neigbour data input berdasarkan data latih
 def find_neighbour(train_set, test_row, n_neighbour, algorithm):
     distances = []
     if algorithm == 'e':
@@ -61,7 +60,7 @@ def find_neighbour(train_set, test_row, n_neighbour, algorithm):
             distances.append((dist, train_row))
     elif algorithm == 'm':
         for train_row in train_set:
-            dist = minkowski_distance(test_row, train_row)
+            dist = manhattan_distance(test_row, train_row)
             distances.append((dist, train_row))
 
     distances.sort(key=lambda sort_index: sort_index[0])
@@ -71,7 +70,7 @@ def find_neighbour(train_set, test_row, n_neighbour, algorithm):
     return neighbour
 
 
-# Make a prediction with neighbors
+# mencari klasifikasi dari label data latih
 def get_classification(train_set, test_row, n_neighbour, algorithm):
     neighbour = find_neighbour(train_set, test_row, n_neighbour, algorithm)
     classification_value = []
@@ -81,9 +80,10 @@ def get_classification(train_set, test_row, n_neighbour, algorithm):
     return prediction
 
 
+# mencari akurasi dari data uji terhadap data latih
 def classification_testing(train_set, test_set, n_neighbour, algorithm):
     result = []
-    accuracy = 1
+    accuracy = 0
     for i in range(1, len(test_set)):
         label = get_classification(train_set, test_set[i], n_neighbour,
                                    algorithm)
@@ -94,6 +94,7 @@ def classification_testing(train_set, test_set, n_neighbour, algorithm):
     return accuracy / (len(test_set) - 1)
 
 
+# mencari nilai optimal k
 def optimal_k_value(train_set, test_set, k_start, k_step, k_max, algorithm):
     max_acc = 0
     optimal_k = 1
@@ -106,9 +107,10 @@ def optimal_k_value(train_set, test_set, k_start, k_step, k_max, algorithm):
     return optimal_k, max_acc
 
 
+#mencari klasifikasi data uji
 def classification_output_test(train_set, data_set, n_neighbour, algorithm):
     result = []
-    accuracy = 1
+    accuracy = 0
     for i in range(1, len(data_set)):
         label = get_classification(train_set, data_set[i], n_neighbour,
                                    algorithm)
@@ -124,6 +126,7 @@ def classification_output_test(train_set, data_set, n_neighbour, algorithm):
     result.to_excel('./OutputLatih.xlsx', index=False)
 
 
+#mencari klasifikasi data submit
 def classification_output_submit(train_set, data_set, n_neighbour, algorithm):
     result = []
     for i in range(1, len(data_set)):
@@ -133,7 +136,8 @@ def classification_output_submit(train_set, data_set, n_neighbour, algorithm):
 
     result = pd.DataFrame(result)
     result.columns = ['idData', 'Klasifikasi']
-    result.to_excel('./OutputSubmit.xlsx', index=False)
+    result.to_excel('./OutputSubmitAll.xlsx', index=False)
+    result.head(10).to_excel('./OutputSubmit.xlsx', index=False)
 
 
 #main program
@@ -191,11 +195,11 @@ k_value_m, accuracy_m = optimal_k_value(data_latih, data_uji, k_start,
                                         k_interval, k_max, 'm')
 
 print("-------------------------------------------------")
-print("Best k value (minkowski) : ", k_value_m)
-print("Best accuracy (minkowski) : ", accuracy_m)
+print("Best k value (manhattan) : ", k_value_m)
+print("Best accuracy (manhattan) : ", accuracy_m)
 print("-------------------------------------------------")
 if accuracy_m > accuracy_e:
-    print(f"Highest accuracy : {accuracy_m} ,k = {k_value_m}, using minkowski")
+    print(f"Highest accuracy : {accuracy_m} ,k = {k_value_m}, using manhattan")
     accuracy = accuracy_m
     k_value = k_value_m
     algorithm = 'm'
